@@ -37,7 +37,7 @@ This file is used to manually manipulate the intelligences and record data. The 
 1. `manual_play_and_record` function: allows the user to control the SmartBody using the keyboard and record the SmartBody's movements and state to a file.
 2. setting up the Pygame window, which renders the environment and receives user input.
 
-### `test_model.py`
+### `model_test.ipynb`
 This file contains the code used to test the UDRL algorithm. The main functions include:
 1. create UDRL instances and train them according to the selected mode (automatic or manual).
 2. printing key metrics during training, such as rewards, losses, etc.
