@@ -7,22 +7,6 @@ from udrl import UDRL
 env = FourRoomsEnv()
 env = RGBImgObsWrapper(env)
 
-# Auto
-# udrl_auto = UDRL(
-#     env=env,
-#     buffer_size=10000,
-#     hidden_size=64,
-#     learning_rate=1e-3,
-#     return_scale=0.02,
-#     horizon_scale=0.02,
-#     batch_size=2,
-#     n_updates_per_iter=150,
-#     n_episodes_per_iter=15,
-#     last_few=50,
-#     mode='auto'
-# )
-# udrl_auto.train_and_plot(max_episodes=10)
-
 udrl_manual = UDRL(
     env=env,
     buffer_size=10000,
@@ -35,7 +19,14 @@ udrl_manual = UDRL(
     n_episodes_per_iter=15,
     last_few=50,
     mode='manual',
-    filename="fourRoomRecord.pkl"
+    filename="fourRoomRecorddata.pkl"
 )
+udrl_manual.train_and_plot(max_episodes=5)
+udrl_manual.save_model('model_FourRoom_Mannul.pth')
 
-udrl_manual.train_and_plot(max_episodes=10)
+#############################################################################################################################################################################
+
+env = FourRoomsEnv(render_mode='human')
+env = RGBImgObsWrapper(env)
+udrl_manual.load_model('model_FourRoom_Mannul.pth')
+udrl_manual.test_model(num_episodes=5,render=True)
