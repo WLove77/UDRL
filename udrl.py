@@ -14,6 +14,7 @@ import logging
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class ReplayBuffer():
     def __init__(self, max_size):
         self.max_size = max_size
@@ -145,7 +146,7 @@ class UDRL:
     def warm_up(self):
         init_desired_reward = 1
         init_time_horizon = 1
-        for i in range(self.n_warm_up_episodes):
+        for i in tqdm(range(self.n_warm_up_episodes),desc='Warming up'):
             desired_return = torch.FloatTensor([init_desired_reward])
             desired_time_horizon = torch.FloatTensor([init_time_horizon])
             obs, _ = self.env.reset()
@@ -155,7 +156,8 @@ class UDRL:
             while True:
                 state_tensor = torch.from_numpy(state).float().permute(2, 0, 1).to(self.device)
                 action = self.bf.action(state_tensor.unsqueeze(0).to(self.device), desired_return.to(self.device),
-                                        desired_time_horizon.to(self.device), self.return_scale, self.horizon_scale).item()
+                                        desired_time_horizon.to(self.device), self.return_scale,
+                                        self.horizon_scale).item()
                 next_obs, reward, done, truncated, _ = self.env.step(action)
                 total_reward += reward
                 next_state = next_obs['image']
@@ -172,7 +174,8 @@ class UDRL:
                 desired_time_horizon = torch.FloatTensor([max(desired_time_horizon.item(), 1)])
                 if done or truncated:
                     logging.info(
-                        f"Step {step}: Action = {action}, TotalReward = {total_reward:.2f}, Done = {done}, Truncated = {truncated}",flush=True)
+                        f"Step {step}: Action = {action}, TotalReward = {total_reward:.2f}, Done = {done}, Truncated = {truncated}",
+                        flush=True)
                     break
             self.buffer.add_sample(states, actions, rewards)
 
@@ -310,3 +313,49 @@ class UDRL:
         plt.title("Desired Horizon")
         plt.plot(horizon_history)
         plt.show()
+
+    def save_model(self, filename='trained_model.pth'):
+        torch.save(self.bf.state_dict(), filename)
+        print(f"Model saved as {filename}")
+
+    def load_model(self, filename='trained_model.pth'):
+        self.bf.load_state_dict(torch.load(filename, map_location=self.device))
+        self.bf.to(self.device)
+        print(f"Model loaded from {filename}")
+
+    def test_model(self, num_episodes=5, render=True):
+        for episode in range(num_episodes):
+            obs, _ = self.env.reset()
+            state = obs['image']
+            desired_return = torch.FloatTensor([1]).to(self.device)
+            desired_time_horizon = torch.FloatTensor([100]).to(self.device)
+            total_reward = 0
+            done = False
+            step = 0
+
+            print(f"Episode {episode + 1} starts...")
+
+            while not done:
+                if render:
+                    self.env.render()
+
+                state_tensor = torch.from_numpy(state).float().permute(2, 0, 1).unsqueeze(0).to(self.device)
+
+                action = self.bf.action(state_tensor, desired_return, desired_time_horizon, self.return_scale,
+                                        self.horizon_scale).item()
+
+                next_obs, reward, done, truncated, _ = self.env.step(action)
+                total_reward += reward
+                next_state = next_obs['image']
+
+                state = next_state
+
+                desired_return -= reward
+                desired_time_horizon -= 1
+                desired_time_horizon = torch.FloatTensor([max(desired_time_horizon.item(), 1)]).to(self.device)
+
+                step += 1
+
+                if done or truncated:
+                    print(f"Episode {episode + 1} finished after {step} steps with total reward: {total_reward:.2f}")
+                    break
